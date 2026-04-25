@@ -5,755 +5,184 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ASRL Inventory Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
   :root {
-    --sky: #38bdf8;
-    --sky-light: #bae6fd;
-    --sky-dark: #0ea5e9;
-    --sky-deep: #0284c7;
-    --yellow: #fde047;
-    --yellow-light: #fef9c3;
-    --yellow-dark: #eab308;
-    --bg: #0f172a;
-    --bg-2: #1e293b;
-    --bg-3: #263248;
-    --surface: #1e293b;
-    --surface-2: #263350;
-    --border: #334155;
-    --text: #f1f5f9;
-    --text-2: #94a3b8;
-    --text-3: #64748b;
-    --success: #4ade80;
-    --danger: #f87171;
-    --warning: #fb923c;
-    --fs-xs: 0.7rem;
-    --fs-sm: 0.8rem;
-    --fs-base: 0.95rem;
-    --fs-lg: 1.1rem;
-    --fs-xl: 1.4rem;
+    --sky: #38bdf8; --sky-light: #bae6fd; --sky-dark: #0ea5e9;
+    --yellow: #fde047; --yellow-dark: #eab308;
+    --bg: #0f172a; --bg-2: #1e293b; --bg-3: #263248;
+    --surface: #1e293b; --border: #334155;
+    --text: #f1f5f9; --text-2: #94a3b8; --text-3: #64748b;
+    --success: #4ade80; --danger: #f87171; --warning: #fb923c;
+    --fs-xs: 0.7rem; --fs-sm: 0.8rem; --fs-base: 0.95rem;
     --fs-2xl: 1.8rem;
-    --fs-3xl: 2.4rem;
   }
+  body { font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
 
-  body {
-    font-family: 'Barlow', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+  /* HEADER */
+  header { background:linear-gradient(135deg,#0c1a2e 0%,#0f2744 60%,#0e1f3a 100%); border-bottom:3px solid var(--yellow); padding:0 2rem; position:sticky; top:0; z-index:200; box-shadow:0 4px 30px rgba(0,0,0,.5); }
+  .header-inner { max-width:1600px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:64px; gap:1rem; }
+  .logo { display:flex; align-items:center; gap:.75rem; }
+  .logo-icon { width:38px; height:38px; background:var(--yellow); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
+  .logo-text { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:1.4rem; letter-spacing:1px; text-transform:uppercase; color:var(--yellow); line-height:1; }
+  .logo-sub { font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:.75rem; letter-spacing:2px; text-transform:uppercase; color:var(--sky-light); opacity:.7; }
+  .header-right { display:flex; align-items:center; gap:.75rem; }
+  .save-status { font-size:var(--fs-xs); font-family:'JetBrains Mono',monospace; color:var(--text-3); display:flex; align-items:center; gap:.4rem; }
+  .save-dot { width:7px; height:7px; border-radius:50%; background:var(--success); transition:background .3s; }
+  .save-dot.saving { background:var(--yellow); }
+  .save-dot.error { background:var(--danger); }
+  .btn-export { padding:.45rem 1rem; border:1.5px solid var(--border); background:transparent; color:var(--text-2); font-size:var(--fs-sm); font-family:'Barlow Condensed',sans-serif; font-weight:600; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; border-radius:4px; transition:all .2s; white-space:nowrap; }
+  .btn-export:hover { border-color:var(--sky); color:var(--sky); }
 
-  /* ── HEADER ── */
-  header {
-    background: linear-gradient(135deg, #0c1a2e 0%, #0f2744 60%, #0e1f3a 100%);
-    border-bottom: 3px solid var(--yellow);
-    padding: 0 2rem;
-    position: sticky;
-    top: 0;
-    z-index: 200;
-    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
-  }
-  .header-inner {
-    max-width: 1600px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 64px;
-    gap: 1rem;
-  }
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  .logo-icon {
-    width: 38px;
-    height: 38px;
-    background: var(--yellow);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    flex-shrink: 0;
-  }
-  .logo-text {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 900;
-    font-size: 1.4rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--yellow);
-    line-height: 1;
-  }
-  .logo-sub {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 600;
-    font-size: 0.75rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--sky-light);
-    opacity: 0.7;
-  }
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  .save-status {
-    font-size: var(--fs-xs);
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--text-3);
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .save-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--success);
-    transition: background 0.3s;
-  }
-  .save-dot.saving { background: var(--yellow); }
-  .save-dot.error { background: var(--danger); }
-  .btn-export {
-    padding: 0.45rem 1rem;
-    border: 1.5px solid var(--border);
-    background: transparent;
-    color: var(--text-2);
-    font-size: var(--fs-sm);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
-  }
-  .btn-export:hover { border-color: var(--sky); color: var(--sky); }
+  /* LAYOUT */
+  .app { display:flex; max-width:1600px; margin:0 auto; min-height:calc(100vh - 64px); }
 
-  /* ── LAYOUT ── */
-  .app {
-    display: flex;
-    max-width: 1600px;
-    margin: 0 auto;
-    min-height: calc(100vh - 64px);
-  }
+  /* SIDEBAR */
+  .sidebar { width:240px; flex-shrink:0; background:var(--bg-2); border-right:1px solid var(--border); padding:1.5rem 0; position:sticky; top:64px; height:calc(100vh - 64px); overflow-y:auto; display:flex; flex-direction:column; }
+  .sidebar::-webkit-scrollbar { width:4px; } .sidebar::-webkit-scrollbar-thumb { background:var(--border); }
+  .sidebar-label { font-family:'Barlow Condensed',sans-serif; font-size:var(--fs-xs); font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--text-3); padding:1rem 1.25rem .5rem; margin-top:.5rem; }
+  .sidebar-label:first-child { margin-top:0; }
+  .sidebar-item { display:flex; align-items:center; gap:.65rem; padding:.6rem 1.25rem; cursor:pointer; font-size:var(--fs-sm); font-weight:500; color:var(--text-2); border-left:3px solid transparent; transition:all .15s; user-select:none; }
+  .sidebar-item:hover { background:var(--bg-3); color:var(--text); }
+  .sidebar-item.active { background:rgba(56,189,248,.08); color:var(--sky); border-left-color:var(--sky); }
+  .sidebar-item.cat-active { color:var(--yellow); border-left-color:var(--yellow); background:rgba(253,224,71,.05); }
+  .sidebar-icon { font-size:1rem; width:18px; text-align:center; }
+  .sidebar-count { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:.7rem; background:var(--bg-3); padding:1px 6px; border-radius:10px; color:var(--text-3); min-width:20px; text-align:center; }
+  .sidebar-item.active .sidebar-count,.sidebar-item.cat-active .sidebar-count { background:rgba(56,189,248,.15); color:var(--sky); }
+  .sidebar-bottom { margin-top:auto; padding:1rem 1.25rem; border-top:1px solid var(--border); }
+  .sidebar-total { font-family:'JetBrains Mono',monospace; font-size:var(--fs-sm); color:var(--text-3); text-align:center; }
+  .sidebar-total span { display:block; font-size:1.6rem; font-weight:700; color:var(--yellow); font-family:'Barlow Condensed',sans-serif; }
 
-  /* ── SIDEBAR ── */
-  .sidebar {
-    width: 240px;
-    flex-shrink: 0;
-    background: var(--bg-2);
-    border-right: 1px solid var(--border);
-    padding: 1.5rem 0;
-    position: sticky;
-    top: 64px;
-    height: calc(100vh - 64px);
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  .sidebar::-webkit-scrollbar { width: 4px; }
-  .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+  /* MAIN */
+  .main { flex:1; padding:1.5rem 2rem; min-width:0; }
 
-  .sidebar-section-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: var(--text-3);
-    padding: 1rem 1.25rem 0.5rem;
-    margin-top: 0.5rem;
-  }
-  .sidebar-section-label:first-child { margin-top: 0; }
+  /* TOPBAR */
+  .topbar { display:flex; gap:.75rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:center; }
+  .search-wrap { position:relative; flex:1; min-width:200px; }
+  .search-icon-pos { position:absolute; left:.9rem; top:50%; transform:translateY(-50%); color:var(--text-3); font-size:.9rem; pointer-events:none; }
+  .search-input { width:100%; padding:.65rem 1rem .65rem 2.5rem; background:var(--surface); border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-size:var(--fs-base); font-family:'Barlow',sans-serif; transition:border-color .2s; }
+  .search-input:focus { outline:none; border-color:var(--sky); }
+  .search-input::placeholder { color:var(--text-3); }
+  .btn-add { padding:.65rem 1.4rem; background:var(--yellow); border:none; color:#0f172a; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1rem; text-transform:uppercase; letter-spacing:.5px; cursor:pointer; border-radius:6px; transition:all .2s; white-space:nowrap; box-shadow:0 2px 12px rgba(253,224,71,.25); }
+  .btn-add:hover { background:#fef08a; transform:translateY(-1px); }
 
-  .sidebar-item {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.6rem 1.25rem;
-    cursor: pointer;
-    font-size: var(--fs-sm);
-    font-weight: 500;
-    color: var(--text-2);
-    border-left: 3px solid transparent;
-    transition: all 0.15s;
-    user-select: none;
-  }
-  .sidebar-item:hover { background: var(--bg-3); color: var(--text); }
-  .sidebar-item.active {
-    background: rgba(56, 189, 248, 0.08);
-    color: var(--sky);
-    border-left-color: var(--sky);
-  }
-  .sidebar-item.cat-active {
-    color: var(--yellow);
-    border-left-color: var(--yellow);
-    background: rgba(253, 224, 71, 0.05);
-  }
-  .sidebar-icon { font-size: 1rem; width: 18px; text-align: center; }
-  .sidebar-count {
-    margin-left: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    background: var(--bg-3);
-    padding: 1px 6px;
-    border-radius: 10px;
-    color: var(--text-3);
-    min-width: 20px;
-    text-align: center;
-  }
-  .sidebar-item.active .sidebar-count,
-  .sidebar-item.cat-active .sidebar-count {
-    background: rgba(56,189,248,0.15);
-    color: var(--sky);
-  }
+  /* PAGE TITLE */
+  .page-title-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
+  .page-title { font-family:'Barlow Condensed',sans-serif; font-size:var(--fs-2xl); font-weight:900; text-transform:uppercase; letter-spacing:1px; color:var(--text); line-height:1; }
+  .btn-add-section { padding:.4rem 1rem; background:transparent; border:1.5px dashed var(--border); color:var(--text-3); font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:.85rem; text-transform:uppercase; letter-spacing:.5px; cursor:pointer; border-radius:4px; transition:all .2s; }
+  .btn-add-section:hover { border-color:var(--sky); color:var(--sky); border-style:solid; }
 
-  .sidebar-bottom {
-    margin-top: auto;
-    padding: 1rem 1.25rem;
-    border-top: 1px solid var(--border);
-  }
-  .sidebar-total {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: var(--fs-sm);
-    color: var(--text-3);
-    text-align: center;
-  }
-  .sidebar-total span {
-    display: block;
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--yellow);
-    font-family: 'Barlow Condensed', sans-serif;
-  }
+  /* SECTIONS */
+  .section-block { background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-bottom:1.25rem; overflow:hidden; animation:fadeIn .25s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .section-header { display:flex; align-items:center; gap:.75rem; padding:.85rem 1.25rem; background:var(--bg-3); border-bottom:1px solid var(--border); cursor:pointer; user-select:none; transition:background .15s; }
+  .section-header:hover { background:#2d3f5a; }
+  .section-name { font-family:'Barlow Condensed',sans-serif; font-size:1.05rem; font-weight:800; text-transform:uppercase; letter-spacing:.75px; color:var(--sky-light); flex:1; }
+  .section-toggle { color:var(--text-3); font-size:.8rem; transition:transform .2s; }
+  .section-toggle.collapsed { transform:rotate(-90deg); }
+  .section-count { font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--text-3); background:var(--bg-2); padding:2px 8px; border-radius:10px; }
+  .section-actions { display:flex; gap:.4rem; }
+  .section-action-btn { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:.8rem; padding:2px 6px; border-radius:3px; transition:all .15s; }
+  .section-action-btn:hover { background:var(--border); color:var(--text); }
+  .section-action-btn.del:hover { background:rgba(248,113,113,.15); color:var(--danger); }
+  .section-body { padding:0; }
+  .section-body.collapsed { display:none; }
 
-  /* ── MAIN ── */
-  .main {
-    flex: 1;
-    padding: 1.5rem 2rem;
-    min-width: 0;
-  }
+  /* TABLE */
+  .items-table { width:100%; border-collapse:collapse; }
+  .items-table th { text-align:left; padding:.6rem 1rem; font-family:'Barlow Condensed',sans-serif; font-size:var(--fs-xs); font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-3); border-bottom:1px solid var(--border); background:rgba(0,0,0,.1); }
+  .items-table th:last-child { text-align:right; }
+  .items-table td { padding:.7rem 1rem; font-size:var(--fs-base); border-bottom:1px solid rgba(51,65,85,.5); vertical-align:middle; }
+  .items-table tr:last-child td { border-bottom:none; }
+  .items-table tr:hover td { background:rgba(56,189,248,.03); }
+  .item-name-cell { font-weight:600; color:var(--text); }
+  .item-notes-cell { font-size:var(--fs-sm); color:var(--text-2); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .item-loc-cell { font-size:var(--fs-sm); color:var(--text-2); }
+  .qty-cell { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1rem; }
+  .qty-cell.ok { color:var(--sky); } .qty-cell.low { color:var(--warning); } .qty-cell.zero { color:var(--danger); }
+  .qty-controls { display:flex; align-items:center; gap:.3rem; }
+  .qty-btn { width:26px; height:26px; border:1.5px solid var(--border); background:var(--bg-2); color:var(--text-2); cursor:pointer; border-radius:4px; font-size:1rem; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .qty-btn:hover { border-color:var(--sky); color:var(--sky); background:rgba(56,189,248,.08); }
+  .qty-btn.minus:hover { border-color:var(--warning); color:var(--warning); background:rgba(251,146,60,.08); }
+  .actions-cell { text-align:right; white-space:nowrap; }
+  .action-btn { padding:.3rem .7rem; border:1.5px solid var(--border); background:none; color:var(--text-3); cursor:pointer; font-size:var(--fs-xs); font-family:'Barlow Condensed',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.5px; border-radius:3px; margin-left:.3rem; transition:all .15s; }
+  .action-btn:hover { border-color:var(--sky); color:var(--sky); }
+  .action-btn.del { border-color:transparent; }
+  .action-btn.del:hover { border-color:var(--danger); color:var(--danger); background:rgba(248,113,113,.08); }
 
-  /* ── TOPBAR ── */
-  .topbar {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .search-wrap {
-    position: relative;
-    flex: 1;
-    min-width: 200px;
-  }
-  .search-icon-pos {
-    position: absolute;
-    left: 0.9rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-3);
-    font-size: 0.9rem;
-    pointer-events: none;
-  }
-  .search-input {
-    width: 100%;
-    padding: 0.65rem 1rem 0.65rem 2.5rem;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-size: var(--fs-base);
-    font-family: 'Barlow', sans-serif;
-    transition: border-color 0.2s;
-  }
-  .search-input:focus { outline: none; border-color: var(--sky); }
-  .search-input::placeholder { color: var(--text-3); }
+  /* ADD ITEM ROW */
+  .add-item-row td { padding:.5rem .75rem; background:rgba(56,189,248,.03); border-top:1px dashed var(--border); border-bottom:none !important; }
+  .inline-input { width:100%; background:var(--bg-2); border:1.5px solid var(--border); border-radius:4px; color:var(--text); font-size:var(--fs-sm); font-family:'Barlow',sans-serif; padding:.4rem .6rem; transition:border-color .15s; }
+  .inline-input:focus { outline:none; border-color:var(--sky); }
+  .inline-input::placeholder { color:var(--text-3); }
+  .inline-input.qty-input { width:70px; font-family:'JetBrains Mono',monospace; }
+  .btn-save-item { padding:.4rem .9rem; background:var(--yellow); border:none; color:#0f172a; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:.85rem; text-transform:uppercase; cursor:pointer; border-radius:4px; transition:all .15s; }
+  .btn-save-item:hover { background:#fef08a; }
+  .btn-cancel-item { padding:.4rem .7rem; background:none; border:1.5px solid var(--border); color:var(--text-3); font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:.85rem; text-transform:uppercase; cursor:pointer; border-radius:4px; margin-right:.4rem; transition:all .15s; }
+  .btn-cancel-item:hover { color:var(--text-2); }
+  .btn-add-item-row { width:100%; padding:.5rem 1rem; background:none; border:none; border-top:1px dashed var(--border); color:var(--text-3); font-size:var(--fs-sm); font-family:'Barlow',sans-serif; cursor:pointer; text-align:left; transition:all .15s; }
+  .btn-add-item-row:hover { color:var(--sky); background:rgba(56,189,248,.04); }
+  .empty-section { padding:1.5rem 1rem; text-align:center; color:var(--text-3); font-size:var(--fs-sm); font-style:italic; }
 
-  .btn-add {
-    padding: 0.65rem 1.4rem;
-    background: var(--yellow);
-    border: none;
-    color: #0f172a;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 800;
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.2s;
-    white-space: nowrap;
-    box-shadow: 0 2px 12px rgba(253,224,71,0.25);
-  }
-  .btn-add:hover { background: #fef08a; transform: translateY(-1px); box-shadow: 0 4px 18px rgba(253,224,71,0.35); }
+  /* STATS */
+  .stats-row { display:flex; gap:.75rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+  .stat-chip { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.6rem 1rem; display:flex; align-items:center; gap:.6rem; flex:1; min-width:130px; }
+  .stat-chip-icon { font-size:1.2rem; }
+  .stat-chip-info { line-height:1.2; }
+  .stat-chip-val { font-family:'Barlow Condensed',sans-serif; font-size:1.4rem; font-weight:900; color:var(--yellow); }
+  .stat-chip-label { font-size:.7rem; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; font-weight:600; }
 
-  /* ── PAGE TITLE ── */
-  .page-title-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.25rem;
-  }
-  .page-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: var(--fs-2xl);
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text);
-    line-height: 1;
-  }
-  .page-title .cat-badge {
-    display: inline-block;
-    font-size: 0.9rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 4px;
-    margin-left: 0.75rem;
-    vertical-align: middle;
-    position: relative;
-    top: -3px;
-    letter-spacing: 1px;
-  }
-  .cat-fs { background: rgba(56,189,248,0.15); color: var(--sky); }
-  .cat-dnf { background: rgba(253,224,71,0.12); color: var(--yellow-dark); }
-  .cat-code { background: rgba(74,222,128,0.12); color: var(--success); }
+  /* TOAST */
+  .toast-container { position:fixed; bottom:1.5rem; right:1.5rem; display:flex; flex-direction:column; gap:.5rem; z-index:9999; }
+  .toast { padding:.7rem 1.1rem; border-radius:6px; font-size:var(--fs-sm); font-weight:500; animation:toastIn .3s ease, toastOut .3s ease 2.6s forwards; box-shadow:0 4px 20px rgba(0,0,0,.4); max-width:310px; }
+  @keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes toastOut { from{opacity:1} to{opacity:0} }
+  .toast.success { background:#14532d; border:1px solid var(--success); color:#86efac; }
+  .toast.info { background:#0c2a4a; border:1px solid var(--sky); color:var(--sky-light); }
+  .toast.warn { background:#422006; border:1px solid var(--warning); color:#fed7aa; }
 
-  .btn-add-section {
-    padding: 0.4rem 1rem;
-    background: transparent;
-    border: 1.5px dashed var(--border);
-    color: var(--text-3);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
-  }
-  .btn-add-section:hover { border-color: var(--sky); color: var(--sky); border-style: solid; }
+  /* MODAL */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:500; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background:var(--bg-2); border:2px solid var(--yellow); border-radius:10px; padding:2rem; width:90%; max-width:500px; box-shadow:0 20px 60px rgba(0,0,0,.6); animation:fadeIn .2s ease; max-height:90vh; overflow-y:auto; }
+  .modal-title { font-family:'Barlow Condensed',sans-serif; font-size:1.5rem; font-weight:900; text-transform:uppercase; color:var(--yellow); letter-spacing:1px; margin-bottom:1.25rem; }
+  .modal-field { margin-bottom:1rem; }
+  .modal-label { display:block; font-size:var(--fs-xs); font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-3); margin-bottom:.35rem; }
+  .modal-input { width:100%; background:var(--bg-3); border:1.5px solid var(--border); border-radius:5px; color:var(--text); font-size:var(--fs-base); font-family:'Barlow',sans-serif; padding:.6rem .9rem; transition:border-color .2s; }
+  .modal-input:focus { outline:none; border-color:var(--sky); }
+  .modal-input::placeholder { color:var(--text-3); }
+  .modal-hint { font-size:var(--fs-xs); color:var(--text-3); margin-top:.4rem; line-height:1.6; }
+  .modal-divider { border:none; border-top:1px solid var(--border); margin:1.25rem 0; }
+  .modal-or-label { text-align:center; color:var(--text-3); font-size:var(--fs-xs); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin:-0.75rem 0; position:relative; }
+  .modal-or-label span { background:var(--bg-2); padding:0 .75rem; }
+  .modal-actions { display:flex; gap:.75rem; margin-top:1.5rem; justify-content:flex-end; flex-wrap:wrap; }
+  .modal-btn-cancel { padding:.6rem 1.2rem; background:none; border:1.5px solid var(--border); color:var(--text-2); font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:.95rem; text-transform:uppercase; cursor:pointer; border-radius:5px; transition:all .15s; }
+  .modal-btn-cancel:hover { border-color:var(--text-2); }
+  .modal-btn-confirm { padding:.6rem 1.4rem; background:var(--yellow); border:none; color:#0f172a; font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:.95rem; text-transform:uppercase; cursor:pointer; border-radius:5px; transition:all .15s; }
+  .modal-btn-confirm:hover { background:#fef08a; }
+  .modal-btn-sheets { background:var(--sky); color:#0f172a; }
+  .modal-btn-sheets:hover { background:var(--sky-light); }
 
-  /* ── SECTION BLOCKS ── */
-  .section-block {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    margin-bottom: 1.25rem;
-    overflow: hidden;
-    animation: fadeIn 0.25s ease;
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  /* EMPTY */
+  .empty-main { text-align:center; padding:4rem 2rem; color:var(--text-3); }
+  .empty-main-icon { font-size:3.5rem; opacity:.3; margin-bottom:1rem; }
+  .empty-main h3 { font-size:1.2rem; margin-bottom:.5rem; color:var(--text-2); }
+  .empty-main p { font-size:var(--fs-sm); }
 
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.85rem 1.25rem;
-    background: var(--bg-3);
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.15s;
+  /* RESPONSIVE */
+  @media (max-width:768px) {
+    .sidebar { display:none; }
+    .sidebar.open { display:flex; position:fixed; top:64px; left:0; z-index:300; height:calc(100vh - 64px); box-shadow:4px 0 30px rgba(0,0,0,.5); }
+    .main { padding:1rem; }
+    .hamburger { display:flex !important; }
+    .items-table th:nth-child(3),.items-table td:nth-child(3),
+    .items-table th:nth-child(4),.items-table td:nth-child(4) { display:none; }
   }
-  .section-header:hover { background: #2d3f5a; }
-  .section-name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 1.05rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.75px;
-    color: var(--sky-light);
-    flex: 1;
-  }
-  .section-toggle { color: var(--text-3); font-size: 0.8rem; transition: transform 0.2s; }
-  .section-toggle.collapsed { transform: rotate(-90deg); }
-  .section-count {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--text-3);
-    background: var(--bg-2);
-    padding: 2px 8px;
-    border-radius: 10px;
-  }
-  .section-actions { display: flex; gap: 0.4rem; }
-  .section-action-btn {
-    background: none;
-    border: none;
-    color: var(--text-3);
-    cursor: pointer;
-    font-size: 0.8rem;
-    padding: 2px 6px;
-    border-radius: 3px;
-    transition: all 0.15s;
-    font-family: 'Barlow', sans-serif;
-  }
-  .section-action-btn:hover { background: var(--border); color: var(--text); }
-  .section-action-btn.del:hover { background: rgba(248,113,113,0.15); color: var(--danger); }
-
-  .section-body { padding: 0; }
-  .section-body.collapsed { display: none; }
-
-  /* ── ITEMS TABLE ── */
-  .items-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .items-table th {
-    text-align: left;
-    padding: 0.6rem 1rem;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--text-3);
-    border-bottom: 1px solid var(--border);
-    background: rgba(0,0,0,0.1);
-  }
-  .items-table th:last-child { text-align: right; }
-  .items-table td {
-    padding: 0.7rem 1rem;
-    font-size: var(--fs-base);
-    border-bottom: 1px solid rgba(51,65,85,0.5);
-    vertical-align: middle;
-  }
-  .items-table tr:last-child td { border-bottom: none; }
-  .items-table tr:hover td { background: rgba(56,189,248,0.03); }
-
-  .item-name-cell { font-weight: 600; color: var(--text); }
-  .item-notes-cell { font-size: var(--fs-sm); color: var(--text-2); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .item-loc-cell { font-size: var(--fs-sm); color: var(--text-2); }
-  .qty-cell {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 700;
-    font-size: 1rem;
-  }
-  .qty-cell.ok { color: var(--sky); }
-  .qty-cell.low { color: var(--warning); }
-  .qty-cell.zero { color: var(--danger); }
-
-  .qty-controls { display: flex; align-items: center; gap: 0.3rem; }
-  .qty-btn {
-    width: 26px;
-    height: 26px;
-    border: 1.5px solid var(--border);
-    background: var(--bg-2);
-    color: var(--text-2);
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-    line-height: 1;
-  }
-  .qty-btn:hover { border-color: var(--sky); color: var(--sky); background: rgba(56,189,248,0.08); }
-  .qty-btn.minus:hover { border-color: var(--warning); color: var(--warning); background: rgba(251,146,60,0.08); }
-
-  .actions-cell { text-align: right; white-space: nowrap; }
-  .action-btn {
-    padding: 0.3rem 0.7rem;
-    border: 1.5px solid var(--border);
-    background: none;
-    color: var(--text-3);
-    cursor: pointer;
-    font-size: var(--fs-xs);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-radius: 3px;
-    margin-left: 0.3rem;
-    transition: all 0.15s;
-  }
-  .action-btn:hover { border-color: var(--sky); color: var(--sky); }
-  .action-btn.del { border-color: transparent; }
-  .action-btn.del:hover { border-color: var(--danger); color: var(--danger); background: rgba(248,113,113,0.08); }
-
-  /* ── ADD ITEM ROW ── */
-  .add-item-row td {
-    padding: 0.5rem 0.75rem;
-    background: rgba(56,189,248,0.03);
-    border-top: 1px dashed var(--border);
-    border-bottom: none !important;
-  }
-  .inline-input {
-    width: 100%;
-    background: var(--bg-2);
-    border: 1.5px solid var(--border);
-    border-radius: 4px;
-    color: var(--text);
-    font-size: var(--fs-sm);
-    font-family: 'Barlow', sans-serif;
-    padding: 0.4rem 0.6rem;
-    transition: border-color 0.15s;
-  }
-  .inline-input:focus { outline: none; border-color: var(--sky); }
-  .inline-input::placeholder { color: var(--text-3); }
-  .inline-input.qty-input { width: 70px; font-family: 'JetBrains Mono', monospace; }
-
-  .btn-save-item {
-    padding: 0.4rem 0.9rem;
-    background: var(--yellow);
-    border: none;
-    color: #0f172a;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 800;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.15s;
-  }
-  .btn-save-item:hover { background: #fef08a; }
-  .btn-cancel-item {
-    padding: 0.4rem 0.7rem;
-    background: none;
-    border: 1.5px solid var(--border);
-    color: var(--text-3);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 4px;
-    margin-right: 0.4rem;
-    transition: all 0.15s;
-  }
-  .btn-cancel-item:hover { color: var(--text-2); border-color: var(--text-3); }
-
-  .btn-add-item-row {
-    width: 100%;
-    padding: 0.5rem;
-    background: none;
-    border: none;
-    border-top: 1px dashed var(--border);
-    color: var(--text-3);
-    font-size: var(--fs-sm);
-    font-family: 'Barlow', sans-serif;
-    cursor: pointer;
-    text-align: left;
-    padding-left: 1rem;
-    transition: all 0.15s;
-  }
-  .btn-add-item-row:hover { color: var(--sky); background: rgba(56,189,248,0.04); }
-
-  .empty-section {
-    padding: 1.5rem 1rem;
-    text-align: center;
-    color: var(--text-3);
-    font-size: var(--fs-sm);
-    font-style: italic;
-  }
-
-  /* ── STATS MINI BAR ── */
-  .stats-row {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-  }
-  .stat-chip {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.6rem 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    flex: 1;
-    min-width: 130px;
-  }
-  .stat-chip-icon { font-size: 1.2rem; }
-  .stat-chip-info { line-height: 1.2; }
-  .stat-chip-val {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 1.4rem;
-    font-weight: 900;
-    color: var(--yellow);
-  }
-  .stat-chip-label {
-    font-size: 0.7rem;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-  }
-
-  /* ── TOAST ── */
-  .toast-container {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    z-index: 9999;
-  }
-  .toast {
-    padding: 0.7rem 1.1rem;
-    border-radius: 6px;
-    font-size: var(--fs-sm);
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    max-width: 280px;
-  }
-  @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-  @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
-  .toast.success { background: #14532d; border: 1px solid var(--success); color: #86efac; }
-  .toast.info { background: #0c2a4a; border: 1px solid var(--sky); color: var(--sky-light); }
-  .toast.warn { background: #422006; border: 1px solid var(--warning); color: #fed7aa; }
-
-  /* ── MODAL ── */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.75);
-    z-index: 500;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-  }
-  .modal-overlay.open { display: flex; }
-  .modal-box {
-    background: var(--bg-2);
-    border: 2px solid var(--yellow);
-    border-radius: 10px;
-    padding: 2rem;
-    width: 90%;
-    max-width: 480px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-    animation: fadeIn 0.2s ease;
-  }
-  .modal-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    color: var(--yellow);
-    letter-spacing: 1px;
-    margin-bottom: 1.25rem;
-  }
-  .modal-field { margin-bottom: 1rem; }
-  .modal-label {
-    display: block;
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-3);
-    margin-bottom: 0.35rem;
-  }
-  .modal-input {
-    width: 100%;
-    background: var(--bg-3);
-    border: 1.5px solid var(--border);
-    border-radius: 5px;
-    color: var(--text);
-    font-size: var(--fs-base);
-    font-family: 'Barlow', sans-serif;
-    padding: 0.6rem 0.9rem;
-    transition: border-color 0.2s;
-  }
-  .modal-input:focus { outline: none; border-color: var(--sky); }
-  .modal-input::placeholder { color: var(--text-3); }
-  .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end; }
-  .modal-btn-cancel {
-    padding: 0.6rem 1.2rem;
-    background: none;
-    border: 1.5px solid var(--border);
-    color: var(--text-2);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 0.95rem;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: all 0.15s;
-  }
-  .modal-btn-cancel:hover { border-color: var(--text-2); }
-  .modal-btn-confirm {
-    padding: 0.6rem 1.4rem;
-    background: var(--yellow);
-    border: none;
-    color: #0f172a;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 900;
-    font-size: 0.95rem;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 5px;
-    letter-spacing: 0.5px;
-    transition: all 0.15s;
-  }
-  .modal-btn-confirm:hover { background: #fef08a; }
-
-  /* ── EMPTY STATE ── */
-  .empty-main {
-    text-align: center;
-    padding: 4rem 2rem;
-    color: var(--text-3);
-  }
-  .empty-main-icon { font-size: 3.5rem; opacity: 0.3; margin-bottom: 1rem; }
-  .empty-main h3 { font-size: 1.2rem; margin-bottom: 0.5rem; color: var(--text-2); }
-  .empty-main p { font-size: var(--fs-sm); }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 768px) {
-    .sidebar { display: none; }
-    .sidebar.open {
-      display: flex;
-      position: fixed;
-      top: 64px;
-      left: 0;
-      z-index: 300;
-      height: calc(100vh - 64px);
-      box-shadow: 4px 0 30px rgba(0,0,0,0.5);
-    }
-    .main { padding: 1rem; }
-    .hamburger { display: flex !important; }
-    .items-table th:nth-child(3),
-    .items-table td:nth-child(3),
-    .items-table th:nth-child(4),
-    .items-table td:nth-child(4) { display: none; }
-  }
-  .hamburger {
-    display: none;
-    background: none;
-    border: none;
-    color: var(--text-2);
-    font-size: 1.4rem;
-    cursor: pointer;
-    padding: 0.3rem;
-  }
-  .sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 250;
-  }
-  .sidebar-overlay.open { display: block; }
-
-  /* ── SEARCH HIGHLIGHT ── */
-  .highlight { background: rgba(253,224,71,0.25); border-radius: 2px; }
+  .hamburger { display:none; background:none; border:none; color:var(--text-2); font-size:1.4rem; cursor:pointer; padding:.3rem; }
+  .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:250; }
+  .sidebar-overlay.open { display:block; }
+  .highlight { background:rgba(253,224,71,.25); border-radius:2px; }
 </style>
 </head>
 <body>
@@ -761,7 +190,7 @@
 <header>
   <div class="header-inner">
     <div class="logo">
-      <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+      <button class="hamburger" id="btnHamburger" aria-label="Menu">☰</button>
       <div class="logo-icon">🚁</div>
       <div>
         <div class="logo-text">ASRL</div>
@@ -771,615 +200,740 @@
     <div class="header-right">
       <div class="save-status">
         <div class="save-dot" id="saveDot"></div>
-        <span id="saveLabel">Saved</span>
+        <span id="saveLabel">Connecting…</span>
       </div>
-      <button class="btn-export" onclick="exportJSON()">⬇ Export</button>
+      <button class="btn-export" id="btnImport">⬆ Import</button>
+      <input type="file" id="importFileInput" accept=".xlsx" style="display:none">
+      <button class="btn-export" id="btnExcel">⬇ Excel</button>
     </div>
   </div>
 </header>
 
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="app">
-  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-section-label">Overview</div>
-    <div class="sidebar-item active" id="nav-all" onclick="navigateTo('all')">
-      <span class="sidebar-icon">📦</span> All Items
-      <span class="sidebar-count" id="cnt-all">0</span>
-    </div>
-    <div class="sidebar-item" id="nav-low" onclick="navigateTo('low')">
-      <span class="sidebar-icon">⚠️</span> Low Stock
-      <span class="sidebar-count" id="cnt-low">0</span>
-    </div>
-
-    <div class="sidebar-section-label">Categories</div>
-    <div class="sidebar-item" id="nav-fs" onclick="navigateTo('fs')">
-      <span class="sidebar-icon">⚡</span> Flight Systems
-      <span class="sidebar-count" id="cnt-fs">0</span>
-    </div>
-    <div class="sidebar-item" id="nav-dnf" onclick="navigateTo('dnf')">
-      <span class="sidebar-icon">🔧</span> Design & Fab
-      <span class="sidebar-count" id="cnt-dnf">0</span>
-    </div>
-    <div class="sidebar-item" id="nav-code" onclick="navigateTo('code')">
-      <span class="sidebar-icon">💻</span> Coding
-      <span class="sidebar-count" id="cnt-code">0</span>
-    </div>
-
+    <div class="sidebar-label">Overview</div>
+    <div class="sidebar-item active" data-nav="all"><span class="sidebar-icon">📦</span> All Items <span class="sidebar-count" id="cnt-all">0</span></div>
+    <div class="sidebar-item" data-nav="low"><span class="sidebar-icon">⚠️</span> Low Stock <span class="sidebar-count" id="cnt-low">0</span></div>
+    <div class="sidebar-label">Categories</div>
+    <div class="sidebar-item" data-nav="fs"><span class="sidebar-icon">⚡</span> Flight Systems <span class="sidebar-count" id="cnt-fs">0</span></div>
+    <div class="sidebar-item" data-nav="dnf"><span class="sidebar-icon">🔧</span> Design &amp; Fab <span class="sidebar-count" id="cnt-dnf">0</span></div>
+    <div class="sidebar-item" data-nav="code"><span class="sidebar-icon">💻</span> Coding <span class="sidebar-count" id="cnt-code">0</span></div>
     <div class="sidebar-bottom">
-      <div class="sidebar-total">
-        <div class="stat-chip-label">Total Items</div>
-        <span id="totalCount">0</span>
-      </div>
+      <div class="sidebar-total"><div class="stat-chip-label">Total Items</div><span id="totalCount">0</span></div>
     </div>
   </aside>
 
-  <!-- MAIN -->
   <main class="main">
-    <!-- Stats row -->
     <div class="stats-row">
-      <div class="stat-chip">
-        <div class="stat-chip-icon">⚡</div>
-        <div class="stat-chip-info">
-          <div class="stat-chip-val" id="stat-fs">0</div>
-          <div class="stat-chip-label">Flight Systems</div>
-        </div>
-      </div>
-      <div class="stat-chip">
-        <div class="stat-chip-icon">🔧</div>
-        <div class="stat-chip-info">
-          <div class="stat-chip-val" id="stat-dnf">0</div>
-          <div class="stat-chip-label">Design & Fab</div>
-        </div>
-      </div>
-      <div class="stat-chip">
-        <div class="stat-chip-icon">💻</div>
-        <div class="stat-chip-info">
-          <div class="stat-chip-val" id="stat-code">0</div>
-          <div class="stat-chip-label">Coding</div>
-        </div>
-      </div>
-      <div class="stat-chip">
-        <div class="stat-chip-icon">🔴</div>
-        <div class="stat-chip-info">
-          <div class="stat-chip-val" id="stat-low" style="color:var(--danger)">0</div>
-          <div class="stat-chip-label">Low Stock (≤3)</div>
-        </div>
-      </div>
+      <div class="stat-chip"><div class="stat-chip-icon">⚡</div><div class="stat-chip-info"><div class="stat-chip-val" id="stat-fs">0</div><div class="stat-chip-label">Flight Systems</div></div></div>
+      <div class="stat-chip"><div class="stat-chip-icon">🔧</div><div class="stat-chip-info"><div class="stat-chip-val" id="stat-dnf">0</div><div class="stat-chip-label">Design &amp; Fab</div></div></div>
+      <div class="stat-chip"><div class="stat-chip-icon">💻</div><div class="stat-chip-info"><div class="stat-chip-val" id="stat-code">0</div><div class="stat-chip-label">Coding</div></div></div>
+      <div class="stat-chip"><div class="stat-chip-icon">🔴</div><div class="stat-chip-info"><div class="stat-chip-val" id="stat-low" style="color:var(--danger)">0</div><div class="stat-chip-label">Low Stock (≤3)</div></div></div>
     </div>
-
-    <!-- Topbar -->
     <div class="topbar">
       <div class="search-wrap">
         <span class="search-icon-pos">🔍</span>
-        <input type="text" class="search-input" id="searchInput" placeholder="Search items, notes, location..." oninput="renderView()">
+        <input type="text" class="search-input" id="searchInput" placeholder="Search items, notes, location…">
       </div>
-      <button class="btn-add" onclick="openAddSectionModal()">＋ Add Section</button>
+      <button class="btn-add" id="btnAddSection">＋ Add Section</button>
     </div>
-
-    <!-- Content -->
     <div id="contentArea"></div>
   </main>
 </div>
 
-<!-- Modal: Add/Edit Section -->
+<!-- MODAL: Add / Rename Section -->
 <div class="modal-overlay" id="sectionModal">
   <div class="modal-box">
     <div class="modal-title" id="sectionModalTitle">New Section</div>
     <div class="modal-field">
       <label class="modal-label">Section Name</label>
-      <input type="text" class="modal-input" id="sectionNameInput" placeholder="e.g., Motors, ESCs, Filament..." maxlength="50">
+      <input type="text" class="modal-input" id="sectionNameInput" placeholder="e.g., Motors, ESCs, Filament…" maxlength="50">
     </div>
     <div class="modal-field" id="sectionCatField">
       <label class="modal-label">Category</label>
       <select class="modal-input" id="sectionCatInput">
         <option value="fs">⚡ Flight Systems</option>
-        <option value="dnf">🔧 Design & Fabrication</option>
+        <option value="dnf">🔧 Design &amp; Fabrication</option>
         <option value="code">💻 Coding</option>
       </select>
     </div>
     <div class="modal-actions">
-      <button class="modal-btn-cancel" onclick="closeSectionModal()">Cancel</button>
-      <button class="modal-btn-confirm" onclick="confirmSection()">Save</button>
+      <button class="modal-btn-cancel" id="btnCancelSection">Cancel</button>
+      <button class="modal-btn-confirm" id="btnConfirmSection">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Edit Item -->
+<!-- MODAL: Edit Item -->
 <div class="modal-overlay" id="itemModal">
   <div class="modal-box">
     <div class="modal-title">Edit Item</div>
-    <div class="modal-field">
-      <label class="modal-label">Item Name</label>
-      <input type="text" class="modal-input" id="editItemName" placeholder="Item name">
-    </div>
-    <div class="modal-field">
-      <label class="modal-label">Quantity</label>
-      <input type="number" class="modal-input" id="editItemQty" min="0" placeholder="0">
-    </div>
-    <div class="modal-field">
-      <label class="modal-label">Location</label>
-      <input type="text" class="modal-input" id="editItemLoc" placeholder="e.g. Cabinet A, Shelf 2">
-    </div>
-    <div class="modal-field">
-      <label class="modal-label">Notes</label>
-      <input type="text" class="modal-input" id="editItemNotes" placeholder="Extra info...">
-    </div>
+    <div class="modal-field"><label class="modal-label">Item Name</label><input type="text" class="modal-input" id="editItemName" placeholder="Item name"></div>
+    <div class="modal-field"><label class="modal-label">Quantity</label><input type="number" class="modal-input" id="editItemQty" min="0" placeholder="0"></div>
+    <div class="modal-field"><label class="modal-label">Location</label><input type="text" class="modal-input" id="editItemLoc" placeholder="e.g. Cabinet A, Shelf 2"></div>
+    <div class="modal-field"><label class="modal-label">Notes</label><input type="text" class="modal-input" id="editItemNotes" placeholder="Extra info…"></div>
     <div class="modal-actions">
-      <button class="modal-btn-cancel" onclick="closeItemModal()">Cancel</button>
-      <button class="modal-btn-confirm" onclick="confirmEditItem()">Save</button>
+      <button class="modal-btn-cancel" id="btnCancelEditItem">Cancel</button>
+      <button class="modal-btn-confirm" id="btnConfirmEditItem">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Toast container -->
+<!-- MODAL: Admin Import -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal-box">
+    <div class="modal-title">🔒 Admin Import</div>
+    <p style="font-size:var(--fs-sm);color:var(--text-2);margin-bottom:1.25rem;line-height:1.6;">
+      Importing will merge data into the existing inventory. Enter the admin password to proceed.
+    </p>
+    <div class="modal-field">
+      <label class="modal-label">Password</label>
+      <input type="password" class="modal-input" id="importPasswordInput" placeholder="Enter admin password">
+    </div>
+    <div id="importPasswordError" style="display:none;color:var(--danger);font-size:var(--fs-xs);margin-top:-.5rem;margin-bottom:.75rem;font-weight:600;">❌ Incorrect password</div>
+
+    <hr class="modal-divider">
+    <div class="modal-or-label"><span>Choose import source</span></div>
+    <hr class="modal-divider">
+
+    <div class="modal-field">
+      <label class="modal-label">📊 Google Sheets URL</label>
+      <input type="url" class="modal-input" id="sheetsUrlInput" placeholder="https://docs.google.com/spreadsheets/d/…">
+      <p class="modal-hint">
+        Sheet must be shared as <strong style="color:var(--sky)">Anyone with link → Viewer</strong>.<br>
+        Expected columns: <em>Category, Section, Item Name, Quantity, Location, Notes</em>
+        (same as the Excel "All Items" sheet we export).
+      </p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" id="btnCancelImport">Cancel</button>
+      <button class="modal-btn-confirm modal-btn-sheets" id="btnImportSheets">📊 Import from Sheets</button>
+      <button class="modal-btn-confirm" id="btnImportExcel">📂 Import Excel File</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 
-<script>
-// ── DATA ──────────────────────────────────────────────
-// data = { sections: [ { id, name, cat, items: [{id,name,qty,loc,notes}] } ] }
-let data = { sections: [] };
-let currentView = 'all'; // 'all' | 'low' | 'fs' | 'dnf' | 'code'
-let editingSectionId = null;
-let editingItemId = null;
-let editingItemSectionId = null;
-let addingInSection = null; // section id where inline add row is open
+<script type="module">
+// ─────────────────────────────────────────────────────
+//  FIREBASE
+// ─────────────────────────────────────────────────────
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ── DEFAULT SECTIONS ─────────────────────────────────
-const DEFAULT_SECTIONS = [
-  { id: 'fs-motors', name: 'Motors', cat: 'fs' },
-  { id: 'fs-escs', name: "ESC's", cat: 'fs' },
-  { id: 'fs-fc', name: 'Flight Controllers', cat: 'fs' },
-  { id: 'fs-batteries', name: 'Batteries & Chargers', cat: 'fs' },
-  { id: 'fs-frames', name: 'Frames', cat: 'fs' },
-  { id: 'fs-props', name: 'Propellers', cat: 'fs' },
-  { id: 'fs-receivers', name: 'Receivers & Transmitters', cat: 'fs' },
-  { id: 'fs-sensors', name: 'Sensors & Peripherals', cat: 'fs' },
-  { id: 'fs-misc', name: 'Misc Electronics', cat: 'fs' },
-  { id: 'dnf-filament', name: 'Filament & Print Materials', cat: 'dnf' },
-  { id: 'dnf-fasteners', name: 'Fasteners & Hardware', cat: 'dnf' },
-  { id: 'dnf-tools', name: 'Tools & Jigs', cat: 'dnf' },
-  { id: 'dnf-carbon', name: 'Carbon Fibre & Composites', cat: 'dnf' },
-  { id: 'dnf-adhesives', name: 'Adhesives & Sealants', cat: 'dnf' },
-  { id: 'dnf-misc', name: 'Misc Fabrication', cat: 'dnf' },
-  { id: 'code-mcu', name: 'Microcontrollers & SBCs', cat: 'code' },
-  { id: 'code-modules', name: 'Modules & Breakout Boards', cat: 'code' },
-  { id: 'code-cables', name: 'Cables & Connectors', cat: 'code' },
-  { id: 'code-misc', name: 'Misc Coding Hardware', cat: 'code' },
+const fbApp = initializeApp({
+  apiKey:            "AIzaSyAoGCt4yll06Zk67O2mLcHtq_NdoG4E5_E",
+  authDomain:        "asrl-inventory-c5539.firebaseapp.com",
+  projectId:         "asrl-inventory-c5539",
+  storageBucket:     "asrl-inventory-c5539.firebasestorage.app",
+  messagingSenderId: "346404511942",
+  appId:             "1:346404511942:web:819b53252b29c52b81b7c7"
+});
+const db  = getFirestore(fbApp);
+const DOC = doc(db, "inventory", "main");
+
+// ─────────────────────────────────────────────────────
+//  APP STATE
+// ─────────────────────────────────────────────────────
+let data              = { sections: [] };
+let currentView       = 'all';
+let editingSectionId  = null;
+let editingItemSecId  = null;
+let editingItemId     = null;
+let addingInSection   = null;
+let saveTimer         = null;
+let ignoreSnap        = false;
+
+const DEFAULTS = [
+  { id:'fs-motors',    name:'Motors',                   cat:'fs'   },
+  { id:'fs-escs',      name:"ESC's",                    cat:'fs'   },
+  { id:'fs-fc',        name:'Flight Controllers',        cat:'fs'   },
+  { id:'fs-batteries', name:'Batteries & Chargers',      cat:'fs'   },
+  { id:'fs-frames',    name:'Frames',                   cat:'fs'   },
+  { id:'fs-props',     name:'Propellers',               cat:'fs'   },
+  { id:'fs-receivers', name:'Receivers & Transmitters', cat:'fs'   },
+  { id:'fs-sensors',   name:'Sensors & Peripherals',    cat:'fs'   },
+  { id:'fs-misc',      name:'Misc Electronics',         cat:'fs'   },
+  { id:'dnf-filament', name:'Filament & Print Materials',cat:'dnf' },
+  { id:'dnf-fasteners',name:'Fasteners & Hardware',     cat:'dnf'  },
+  { id:'dnf-tools',    name:'Tools & Jigs',             cat:'dnf'  },
+  { id:'dnf-carbon',   name:'Carbon Fibre & Composites',cat:'dnf'  },
+  { id:'dnf-adhesives',name:'Adhesives & Sealants',     cat:'dnf'  },
+  { id:'dnf-misc',     name:'Misc Fabrication',         cat:'dnf'  },
+  { id:'code-mcu',     name:'Microcontrollers & SBCs',  cat:'code' },
+  { id:'code-modules', name:'Modules & Breakout Boards',cat:'code' },
+  { id:'code-cables',  name:'Cables & Connectors',      cat:'code' },
+  { id:'code-misc',    name:'Misc Coding Hardware',     cat:'code' },
 ];
 
-// ── STORAGE ───────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+//  FIREBASE LOAD / SAVE
+// ─────────────────────────────────────────────────────
 async function loadData() {
+  setSaveStatus('connecting');
   try {
-    const result = await window.storage.get('asrl-inventory-v2');
-    if (result && result.value) {
-      data = JSON.parse(result.value);
+    const snap = await getDoc(DOC);
+    if (snap.exists()) {
+      data = JSON.parse(snap.data().payload);
     } else {
-      // Init with defaults
-      data.sections = DEFAULT_SECTIONS.map(s => ({ ...s, items: [] }));
+      data.sections = DEFAULTS.map(s => ({ ...s, items: [] }));
+      await writeFB();
     }
   } catch(e) {
-    data.sections = DEFAULT_SECTIONS.map(s => ({ ...s, items: [] }));
+    console.error('Firebase load error:', e);
+    showToast('warn', '⚠️ Cloud connection failed — running offline');
+    data.sections = DEFAULTS.map(s => ({ ...s, items: [] }));
   }
   refreshAll();
+  setSaveStatus('saved');
+
+  // Live updates listener
+  onSnapshot(DOC, snap => {
+    if (ignoreSnap) { ignoreSnap = false; return; }
+    if (snap.exists()) {
+      data = JSON.parse(snap.data().payload);
+      refreshAll();
+      showToast('info', '🔄 Synced from cloud');
+    }
+  });
 }
 
-async function saveData() {
+async function writeFB() {
+  await setDoc(DOC, { payload: JSON.stringify(data) });
+}
+
+function saveData() {
   setSaveStatus('saving');
-  try {
-    await window.storage.set('asrl-inventory-v2', JSON.stringify(data));
-    setSaveStatus('saved');
-  } catch(e) {
-    // Storage failed silently — data is still in memory
-    setSaveStatus('saved'); // Don't alarm users; data is intact for the session
-    console.warn('Storage unavailable, running in-memory');
-  }
+  ignoreSnap = true;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await writeFB();
+      setSaveStatus('saved');
+    } catch(e) {
+      setSaveStatus('error');
+      console.error('Save error:', e);
+      showToast('warn', '⚠️ Save failed — check connection');
+    }
+  }, 400);
 }
 
-function setSaveStatus(state) {
-  const dot = document.getElementById('saveDot');
-  const label = document.getElementById('saveLabel');
-  dot.className = 'save-dot' + (state === 'saving' ? ' saving' : state === 'error' ? ' error' : '');
-  label.textContent = state === 'saving' ? 'Saving…' : state === 'error' ? 'Error' : 'Saved';
+function setSaveStatus(s) {
+  document.getElementById('saveDot').className = 'save-dot'+(s==='saving'?' saving':s==='error'?' error':'');
+  document.getElementById('saveLabel').textContent =
+    s==='saving'?'Syncing…':s==='error'?'Error':s==='connecting'?'Connecting…':'Saved ☁️';
 }
 
-// ── EXPORT ────────────────────────────────────────────
-function exportJSON() {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'asrl-inventory-' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-  showToast('info', '📥 Export downloaded');
-}
-
-// ── NAVIGATION ───────────────────────────────────────
+// ─────────────────────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────────────────────
 function navigateTo(view) {
   currentView = view;
-  document.querySelectorAll('.sidebar-item').forEach(el => {
-    el.classList.remove('active', 'cat-active');
-  });
-  const navEl = document.getElementById('nav-' + view);
-  if (navEl) {
-    navEl.classList.add(view === 'all' || view === 'low' ? 'active' : 'cat-active');
-  }
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active','cat-active'));
+  const nav = document.querySelector(`.sidebar-item[data-nav="${view}"]`);
+  if (nav) nav.classList.add(view==='all'||view==='low' ? 'active' : 'cat-active');
   document.getElementById('searchInput').value = '';
   renderView();
-  if (window.innerWidth <= 768) closeSidebarMobile();
+  if (window.innerWidth <= 768) closeSidebar();
 }
 
 function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  sidebar.classList.toggle('open');
-  overlay.classList.toggle('open');
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
 }
-function closeSidebarMobile() {
+function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('open');
 }
 
-// ── RENDER ────────────────────────────────────────────
-function refreshAll() {
-  updateCounts();
-  renderView();
-}
+// ─────────────────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────────────────
+function refreshAll() { updateCounts(); renderView(); }
+
+function setText(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
 
 function updateCounts() {
-  const allItems = data.sections.flatMap(s => s.items);
-  const lowItems = allItems.filter(i => i.qty <= 3);
-  const fsSections = data.sections.filter(s => s.cat === 'fs');
-  const dnfSections = data.sections.filter(s => s.cat === 'dnf');
-  const codeSections = data.sections.filter(s => s.cat === 'code');
-
-  const fsCount = fsSections.flatMap(s => s.items).length;
-  const dnfCount = dnfSections.flatMap(s => s.items).length;
-  const codeCount = codeSections.flatMap(s => s.items).length;
-  const total = allItems.length;
-
-  setText('cnt-all', total);
-  setText('cnt-low', lowItems.length);
-  setText('cnt-fs', fsCount);
-  setText('cnt-dnf', dnfCount);
-  setText('cnt-code', codeCount);
-  setText('totalCount', total);
-  setText('stat-fs', fsCount);
-  setText('stat-dnf', dnfCount);
-  setText('stat-code', codeCount);
-  setText('stat-low', lowItems.length);
-}
-
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
+  const all = data.sections.flatMap(s=>s.items);
+  setText('cnt-all', all.length); setText('totalCount', all.length);
+  setText('cnt-low', all.filter(i=>i.qty<=3).length);
+  setText('stat-low', all.filter(i=>i.qty<=3).length);
+  ['fs','dnf','code'].forEach(cat=>{
+    const n = data.sections.filter(s=>s.cat===cat).flatMap(s=>s.items).length;
+    setText('cnt-'+cat, n); setText('stat-'+cat, n);
+  });
 }
 
 function renderView() {
-  const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+  const term = document.getElementById('searchInput').value.toLowerCase().trim();
   const area = document.getElementById('contentArea');
   updateCounts();
 
-  if (currentView === 'all' || currentView === 'low') {
-    const catOrder = ['fs', 'dnf', 'code'];
-    let html = '';
-    let anyVisible = false;
-
-    catOrder.forEach(cat => {
-      const catSections = data.sections.filter(s => s.cat === cat);
-      catSections.forEach(section => {
-        let items = section.items;
-        if (currentView === 'low') items = items.filter(i => i.qty <= 3);
-        if (searchTerm) items = items.filter(i =>
-          i.name.toLowerCase().includes(searchTerm) ||
-          (i.loc||'').toLowerCase().includes(searchTerm) ||
-          (i.notes||'').toLowerCase().includes(searchTerm)
-        );
-        if (currentView === 'low' && items.length === 0) return;
-        if (searchTerm && items.length === 0) return;
-        anyVisible = true;
-        html += renderSection(section, items, searchTerm);
+  if (currentView==='all' || currentView==='low') {
+    let html='', any=false;
+    ['fs','dnf','code'].forEach(cat=>{
+      data.sections.filter(s=>s.cat===cat).forEach(sec=>{
+        let items = sec.items;
+        if (currentView==='low') items = items.filter(i=>i.qty<=3);
+        if (term) items = items.filter(i=>
+          i.name.toLowerCase().includes(term)||
+          (i.loc||'').toLowerCase().includes(term)||
+          (i.notes||'').toLowerCase().includes(term));
+        if ((currentView==='low'||term)&&items.length===0) return;
+        any=true; html+=renderSection(sec,items,term);
       });
     });
-
-    if (!anyVisible) {
-      area.innerHTML = `<div class="empty-main"><div class="empty-main-icon">${currentView === 'low' ? '✅' : '🔍'}</div><h3>${currentView === 'low' ? 'No low-stock items!' : 'Nothing found'}</h3><p>${currentView === 'low' ? 'All items are well stocked.' : 'Try a different search term.'}</p></div>`;
-    } else {
-      area.innerHTML = html;
-    }
+    area.innerHTML = any ? html :
+      `<div class="empty-main"><div class="empty-main-icon">${currentView==='low'?'✅':'🔍'}</div>
+       <h3>${currentView==='low'?'No low-stock items!':'Nothing found'}</h3>
+       <p>${currentView==='low'?'All items are well stocked.':'Try a different search term.'}</p></div>`;
     return;
   }
 
-  // Category view
-  const catMap = { fs: '⚡ Flight Systems', dnf: '🔧 Design & Fabrication', code: '💻 Coding' };
-  const badgeClass = { fs: 'cat-fs', dnf: 'cat-dnf', code: 'cat-code' };
-  const sections = data.sections.filter(s => s.cat === currentView);
-
+  const catNames={fs:'⚡ Flight Systems',dnf:'🔧 Design & Fabrication',code:'💻 Coding'};
+  const secs = data.sections.filter(s=>s.cat===currentView);
   let html = `<div class="page-title-bar">
-    <div class="page-title">${catMap[currentView] || ''}</div>
-    <button class="btn-add-section" onclick="openAddSectionModal('${currentView}')">＋ Add Section</button>
-  </div>`;
-
-  sections.forEach(section => {
-    let items = section.items;
-    if (searchTerm) items = items.filter(i =>
-      i.name.toLowerCase().includes(searchTerm) ||
-      (i.loc||'').toLowerCase().includes(searchTerm) ||
-      (i.notes||'').toLowerCase().includes(searchTerm)
-    );
-    html += renderSection(section, items, searchTerm);
+    <div class="page-title">${catNames[currentView]||''}</div>
+    <button class="btn-add-section" data-addcat="${currentView}">＋ Add Section</button></div>`;
+  secs.forEach(sec=>{
+    let items=sec.items;
+    if(term) items=items.filter(i=>i.name.toLowerCase().includes(term)||(i.loc||'').toLowerCase().includes(term)||(i.notes||'').toLowerCase().includes(term));
+    html+=renderSection(sec,items,term);
   });
-
-  if (sections.length === 0) {
-    html += `<div class="empty-main"><div class="empty-main-icon">📂</div><h3>No sections yet</h3><p>Click "Add Section" to create your first section.</p></div>`;
-  }
-  area.innerHTML = html;
+  if(!secs.length) html+=`<div class="empty-main"><div class="empty-main-icon">📂</div><h3>No sections yet</h3><p>Click "Add Section" to get started.</p></div>`;
+  area.innerHTML=html;
 }
 
-function renderSection(section, filteredItems, searchTerm) {
-  const isAdding = addingInSection === section.id;
-  let rows = '';
-
-  if (filteredItems.length === 0 && !isAdding) {
-    rows = `<tr><td colspan="5"><div class="empty-section">No items yet — click "+ Add Item" below</div></td></tr>`;
+function renderSection(sec, items, term) {
+  const isAdding = addingInSection===sec.id;
+  let rows='';
+  if(!items.length&&!isAdding) {
+    rows=`<tr><td colspan="5"><div class="empty-section">No items yet — click "+ Add Item" below</div></td></tr>`;
   } else {
-    rows = filteredItems.map(item => {
-      const qtyClass = item.qty === 0 ? 'zero' : item.qty <= 3 ? 'low' : 'ok';
-      const name = searchTerm ? highlight(escHtml(item.name), searchTerm) : escHtml(item.name);
-      const loc = searchTerm ? highlight(escHtml(item.loc||'—'), searchTerm) : escHtml(item.loc||'—');
-      const notes = searchTerm ? highlight(escHtml(item.notes||''), searchTerm) : escHtml(item.notes||'');
+    rows=items.map(item=>{
+      const qc=item.qty===0?'zero':item.qty<=3?'low':'ok';
+      const nm=term?highlight(esc(item.name),term):esc(item.name);
+      const lc=term?highlight(esc(item.loc||'—'),term):esc(item.loc||'—');
+      const nt=term?highlight(esc(item.notes||''),term):esc(item.notes||'');
       return `<tr>
-        <td class="item-name-cell">${name}</td>
-        <td>
-          <div class="qty-controls">
-            <button class="qty-btn minus" onclick="adjustQty('${section.id}','${item.id}',-1)" title="Decrease">−</button>
-            <span class="qty-cell ${qtyClass}">${item.qty}</span>
-            <button class="qty-btn" onclick="adjustQty('${section.id}','${item.id}',1)" title="Increase">+</button>
-          </div>
-        </td>
-        <td class="item-loc-cell">${loc}</td>
-        <td class="item-notes-cell" title="${escHtml(item.notes||'')}">${notes||'<span style="color:var(--text-3)">—</span>'}</td>
+        <td class="item-name-cell">${nm}</td>
+        <td><div class="qty-controls">
+          <button class="qty-btn minus" data-sec="${sec.id}" data-item="${item.id}" data-delta="-1">−</button>
+          <span class="qty-cell ${qc}">${item.qty}</span>
+          <button class="qty-btn" data-sec="${sec.id}" data-item="${item.id}" data-delta="1">+</button>
+        </div></td>
+        <td class="item-loc-cell">${lc}</td>
+        <td class="item-notes-cell" title="${esc(item.notes||'')}">${nt||'<span style="color:var(--text-3)">—</span>'}</td>
         <td class="actions-cell">
-          <button class="action-btn" onclick="openEditItem('${section.id}','${item.id}')">Edit</button>
-          <button class="action-btn del" onclick="deleteItem('${section.id}','${item.id}')" title="Delete">🗑</button>
-        </td>
-      </tr>`;
+          <button class="action-btn" data-edit-item="${item.id}" data-edit-sec="${sec.id}">Edit</button>
+          <button class="action-btn del" data-del-item="${item.id}" data-del-sec="${sec.id}">🗑</button>
+        </td></tr>`;
     }).join('');
   }
 
-  const addRow = isAdding ? `
-    <tr class="add-item-row">
-      <td><input class="inline-input" id="new-name-${section.id}" placeholder="Item name" required></td>
-      <td><input class="inline-input qty-input" id="new-qty-${section.id}" type="number" min="0" placeholder="0" value="1"></td>
-      <td><input class="inline-input" id="new-loc-${section.id}" placeholder="Location"></td>
-      <td><input class="inline-input" id="new-notes-${section.id}" placeholder="Notes"></td>
-      <td class="actions-cell">
-        <button class="btn-cancel-item" onclick="cancelAddItem()">✕</button>
-        <button class="btn-save-item" onclick="saveNewItem('${section.id}')">Add</button>
-      </td>
-    </tr>` : '';
+  const addRow=isAdding?`<tr class="add-item-row">
+    <td><input class="inline-input" id="ni-name-${sec.id}" placeholder="Item name"></td>
+    <td><input class="inline-input qty-input" id="ni-qty-${sec.id}" type="number" min="0" value="1"></td>
+    <td><input class="inline-input" id="ni-loc-${sec.id}" placeholder="Location"></td>
+    <td><input class="inline-input" id="ni-notes-${sec.id}" placeholder="Notes"></td>
+    <td class="actions-cell">
+      <button class="btn-cancel-item" data-cancel-add="1">✕</button>
+      <button class="btn-save-item" data-save-add="${sec.id}">Add</button>
+    </td></tr>`:'';
 
-  return `<div class="section-block" id="sb-${section.id}">
-    <div class="section-header" onclick="toggleSection('${section.id}')">
-      <span class="section-toggle" id="tog-${section.id}">▾</span>
-      <span class="section-name">${escHtml(section.name)}</span>
-      <span class="section-count">${section.items.length}</span>
-      <div class="section-actions" onclick="event.stopPropagation()">
-        <button class="section-action-btn" onclick="openRenameSectionModal('${section.id}')" title="Rename">✏️</button>
-        <button class="section-action-btn del" onclick="deleteSection('${section.id}')" title="Delete section">🗑</button>
+  return `<div class="section-block" id="sb-${sec.id}">
+    <div class="section-header" data-toggle-sec="${sec.id}">
+      <span class="section-toggle" id="tog-${sec.id}">▾</span>
+      <span class="section-name">${esc(sec.name)}</span>
+      <span class="section-count">${sec.items.length}</span>
+      <div class="section-actions">
+        <button class="section-action-btn" data-rename-sec="${sec.id}" title="Rename">✏️</button>
+        <button class="section-action-btn del" data-del-sec="${sec.id}" title="Delete">🗑</button>
       </div>
     </div>
-    <div class="section-body" id="body-${section.id}">
+    <div class="section-body" id="body-${sec.id}">
       <table class="items-table">
-        <thead>
-          <tr>
-            <th>Item Name</th>
-            <th>Qty</th>
-            <th>Location</th>
-            <th>Notes</th>
-            <th></th>
-          </tr>
-        </thead>
+        <thead><tr><th>Item Name</th><th>Qty</th><th>Location</th><th>Notes</th><th></th></tr></thead>
         <tbody>${rows}${addRow}</tbody>
       </table>
-      ${!isAdding ? `<button class="btn-add-item-row" onclick="openAddItemRow('${section.id}')">＋ Add Item</button>` : ''}
-    </div>
-  </div>`;
+      ${!isAdding?`<button class="btn-add-item-row" data-open-add="${sec.id}">＋ Add Item</button>`:''}
+    </div></div>`;
 }
 
-// ── SECTION TOGGLE ────────────────────────────────────
-function toggleSection(id) {
-  const body = document.getElementById('body-' + id);
-  const tog = document.getElementById('tog-' + id);
-  if (!body) return;
-  body.classList.toggle('collapsed');
-  if (tog) tog.classList.toggle('collapsed');
-}
+// ─────────────────────────────────────────────────────
+//  SINGLE DELEGATED CLICK HANDLER
+// ─────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  const el = e.target;
 
-// ── SECTION MODAL ─────────────────────────────────────
-function openAddSectionModal(presetCat) {
-  editingSectionId = null;
-  document.getElementById('sectionModalTitle').textContent = 'New Section';
-  document.getElementById('sectionNameInput').value = '';
-  document.getElementById('sectionCatField').style.display = '';
-  if (presetCat) document.getElementById('sectionCatInput').value = presetCat;
-  document.getElementById('sectionModal').classList.add('open');
-  setTimeout(() => document.getElementById('sectionNameInput').focus(), 50);
-}
-function openRenameSectionModal(id) {
-  const section = data.sections.find(s => s.id === id);
-  if (!section) return;
-  editingSectionId = id;
-  document.getElementById('sectionModalTitle').textContent = 'Rename Section';
-  document.getElementById('sectionNameInput').value = section.name;
-  document.getElementById('sectionCatField').style.display = 'none';
-  document.getElementById('sectionModal').classList.add('open');
-  setTimeout(() => document.getElementById('sectionNameInput').focus(), 50);
-}
-function closeSectionModal() {
-  document.getElementById('sectionModal').classList.remove('open');
-  editingSectionId = null;
-}
-function confirmSection() {
-  const name = document.getElementById('sectionNameInput').value.trim();
-  if (!name) { showToast('warn', 'Please enter a section name'); return; }
-  if (editingSectionId) {
-    const s = data.sections.find(s => s.id === editingSectionId);
-    if (s) s.name = name;
-    showToast('success', '✏️ Section renamed');
-  } else {
-    const cat = document.getElementById('sectionCatInput').value;
-    const id = 'sec-' + Date.now();
-    data.sections.push({ id, name, cat, items: [] });
-    showToast('success', '📂 Section added');
+  // Sidebar nav
+  const navItem = el.closest('[data-nav]');
+  if (navItem) { navigateTo(navItem.dataset.nav); return; }
+
+  // Category add-section button (rendered in contentArea)
+  const addCat = el.closest('[data-addcat]');
+  if (addCat) { openAddSectionModal(addCat.dataset.addcat); return; }
+
+  // Section toggle — only if click not on action buttons
+  const toggleEl = el.closest('[data-toggle-sec]');
+  if (toggleEl && !el.closest('.section-actions')) {
+    const id=toggleEl.dataset.toggleSec;
+    document.getElementById('body-'+id)?.classList.toggle('collapsed');
+    document.getElementById('tog-'+id)?.classList.toggle('collapsed');
+    return;
   }
-  closeSectionModal();
-  saveData();
-  refreshAll();
+
+  // Rename section
+  if (el.closest('[data-rename-sec]')) {
+    e.stopPropagation();
+    openRenameSection(el.closest('[data-rename-sec]').dataset.renameSec);
+    return;
+  }
+
+  // Delete section
+  if (el.closest('[data-del-sec]') && !el.closest('[data-del-item]')) {
+    e.stopPropagation();
+    deleteSection(el.closest('[data-del-sec]').dataset.delSec);
+    return;
+  }
+
+  // Qty adjust
+  if (el.dataset.delta) { adjustQty(el.dataset.sec, el.dataset.item, +el.dataset.delta); return; }
+
+  // Edit item
+  if (el.closest('[data-edit-item]')) {
+    const b=el.closest('[data-edit-item]');
+    openEditItem(b.dataset.editSec, b.dataset.editItem);
+    return;
+  }
+
+  // Delete item
+  if (el.closest('[data-del-item]')) {
+    const b=el.closest('[data-del-item]');
+    deleteItem(b.dataset.delSec, b.dataset.delItem);
+    return;
+  }
+
+  // Open add-item row
+  if (el.closest('[data-open-add]')) { openAddItemRow(el.closest('[data-open-add]').dataset.openAdd); return; }
+
+  // Cancel add-item
+  if (el.closest('[data-cancel-add]')) { addingInSection=null; renderView(); return; }
+
+  // Save add-item
+  if (el.closest('[data-save-add]')) { saveNewItem(el.closest('[data-save-add]').dataset.saveAdd); return; }
+});
+
+// ─────────────────────────────────────────────────────
+//  SECTION MODAL
+// ─────────────────────────────────────────────────────
+function openAddSectionModal(presetCat) {
+  editingSectionId=null;
+  document.getElementById('sectionModalTitle').textContent='New Section';
+  document.getElementById('sectionNameInput').value='';
+  document.getElementById('sectionCatField').style.display='';
+  if(presetCat) document.getElementById('sectionCatInput').value=presetCat;
+  document.getElementById('sectionModal').classList.add('open');
+  setTimeout(()=>document.getElementById('sectionNameInput').focus(),50);
+}
+function openRenameSection(id) {
+  const sec=data.sections.find(s=>s.id===id); if(!sec) return;
+  editingSectionId=id;
+  document.getElementById('sectionModalTitle').textContent='Rename Section';
+  document.getElementById('sectionNameInput').value=sec.name;
+  document.getElementById('sectionCatField').style.display='none';
+  document.getElementById('sectionModal').classList.add('open');
+  setTimeout(()=>document.getElementById('sectionNameInput').focus(),50);
+}
+function closeSectionModal() { document.getElementById('sectionModal').classList.remove('open'); editingSectionId=null; }
+function confirmSection() {
+  const name=document.getElementById('sectionNameInput').value.trim();
+  if(!name){showToast('warn','Please enter a section name');return;}
+  if(editingSectionId){
+    const s=data.sections.find(s=>s.id===editingSectionId);
+    if(s) s.name=name;
+    showToast('success','✏️ Section renamed');
+  } else {
+    data.sections.push({id:'sec-'+Date.now(),name,cat:document.getElementById('sectionCatInput').value,items:[]});
+    showToast('success','📂 Section added');
+  }
+  closeSectionModal(); saveData(); refreshAll();
 }
 function deleteSection(id) {
-  const s = data.sections.find(s => s.id === id);
-  if (!s) return;
-  if (s.items.length > 0 && !confirm(`Delete section "${s.name}" and its ${s.items.length} item(s)?`)) return;
-  data.sections = data.sections.filter(s => s.id !== id);
-  saveData();
-  showToast('info', '🗑 Section deleted');
-  refreshAll();
+  const s=data.sections.find(s=>s.id===id); if(!s) return;
+  if(s.items.length>0&&!confirm(`Delete section "${s.name}" and its ${s.items.length} item(s)?`)) return;
+  data.sections=data.sections.filter(s=>s.id!==id);
+  saveData(); showToast('info','🗑 Section deleted'); refreshAll();
 }
 
-// ── ITEM INLINE ADD ───────────────────────────────────
-function openAddItemRow(sectionId) {
-  addingInSection = sectionId;
-  renderView();
-  setTimeout(() => {
-    const el = document.getElementById('new-name-' + sectionId);
-    if (el) el.focus();
-  }, 50);
+// ─────────────────────────────────────────────────────
+//  INLINE ADD ITEM
+// ─────────────────────────────────────────────────────
+function openAddItemRow(secId) {
+  addingInSection=secId; renderView();
+  setTimeout(()=>document.getElementById('ni-name-'+secId)?.focus(),50);
 }
-function cancelAddItem() {
-  addingInSection = null;
-  renderView();
-}
-function saveNewItem(sectionId) {
-  const nameEl = document.getElementById('new-name-' + sectionId);
-  const qtyEl = document.getElementById('new-qty-' + sectionId);
-  const locEl = document.getElementById('new-loc-' + sectionId);
-  const notesEl = document.getElementById('new-notes-' + sectionId);
-  if (!nameEl) return;
-  const name = nameEl.value.trim();
-  if (!name) { showToast('warn', '⚠️ Item name is required'); nameEl.focus(); return; }
-  const qty = parseInt(qtyEl.value) || 0;
-  const section = data.sections.find(s => s.id === sectionId);
-  if (!section) return;
-  section.items.push({
-    id: 'item-' + Date.now(),
-    name,
-    qty,
-    loc: locEl ? locEl.value.trim() : '',
-    notes: notesEl ? notesEl.value.trim() : ''
+function saveNewItem(secId) {
+  const nameEl=document.getElementById('ni-name-'+secId);
+  if(!nameEl) return;
+  const name=nameEl.value.trim();
+  if(!name){showToast('warn','⚠️ Item name is required');nameEl.focus();return;}
+  const sec=data.sections.find(s=>s.id===secId); if(!sec) return;
+  sec.items.push({
+    id:'item-'+Date.now(),name,
+    qty:parseInt(document.getElementById('ni-qty-'+secId)?.value)||0,
+    loc:document.getElementById('ni-loc-'+secId)?.value.trim()||'',
+    notes:document.getElementById('ni-notes-'+secId)?.value.trim()||''
   });
-  addingInSection = null;
-  saveData();
-  showToast('success', `✅ "${name}" added`);
-  refreshAll();
+  addingInSection=null; saveData(); showToast('success',`✅ "${name}" added`); refreshAll();
 }
 
-// Allow Enter key in add row
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && addingInSection) {
-    saveNewItem(addingInSection);
+// ─────────────────────────────────────────────────────
+//  EDIT ITEM MODAL
+// ─────────────────────────────────────────────────────
+function openEditItem(secId, itemId) {
+  const sec=data.sections.find(s=>s.id===secId);
+  const item=sec?.items.find(i=>i.id===itemId); if(!item) return;
+  editingItemSecId=secId; editingItemId=itemId;
+  document.getElementById('editItemName').value=item.name;
+  document.getElementById('editItemQty').value=item.qty;
+  document.getElementById('editItemLoc').value=item.loc||'';
+  document.getElementById('editItemNotes').value=item.notes||'';
+  document.getElementById('itemModal').classList.add('open');
+  setTimeout(()=>document.getElementById('editItemName').focus(),50);
+}
+function closeItemModal() { document.getElementById('itemModal').classList.remove('open'); editingItemId=null; editingItemSecId=null; }
+function confirmEditItem() {
+  const name=document.getElementById('editItemName').value.trim();
+  if(!name){showToast('warn','Item name cannot be empty');return;}
+  const sec=data.sections.find(s=>s.id===editingItemSecId);
+  const item=sec?.items.find(i=>i.id===editingItemId); if(!item) return;
+  item.name=name;
+  item.qty=parseInt(document.getElementById('editItemQty').value)||0;
+  item.loc=document.getElementById('editItemLoc').value.trim();
+  item.notes=document.getElementById('editItemNotes').value.trim();
+  closeItemModal(); saveData(); showToast('success','✅ Item updated'); refreshAll();
+}
+
+// ─────────────────────────────────────────────────────
+//  QTY / DELETE ITEM
+// ─────────────────────────────────────────────────────
+function adjustQty(secId, itemId, delta) {
+  const sec=data.sections.find(s=>s.id===secId);
+  const item=sec?.items.find(i=>i.id===itemId); if(!item) return;
+  item.qty=Math.max(0,item.qty+delta); saveData(); refreshAll();
+}
+function deleteItem(secId, itemId) {
+  const sec=data.sections.find(s=>s.id===secId);
+  const item=sec?.items.find(i=>i.id===itemId); if(!item) return;
+  if(!confirm(`Delete "${item.name}"?`)) return;
+  sec.items=sec.items.filter(i=>i.id!==itemId);
+  saveData(); showToast('info','🗑 Item deleted'); refreshAll();
+}
+
+// ─────────────────────────────────────────────────────
+//  IMPORT MODAL
+// ─────────────────────────────────────────────────────
+function openImportModal() {
+  document.getElementById('importPasswordInput').value='';
+  document.getElementById('importPasswordError').style.display='none';
+  document.getElementById('sheetsUrlInput').value='';
+  document.getElementById('importModal').classList.add('open');
+  setTimeout(()=>document.getElementById('importPasswordInput').focus(),50);
+}
+function closeImportModal() { document.getElementById('importModal').classList.remove('open'); }
+
+function verifyPassword() {
+  const ok = document.getElementById('importPasswordInput').value==='140607';
+  if(!ok) {
+    document.getElementById('importPasswordError').style.display='block';
+    document.getElementById('importPasswordInput').value='';
+    document.getElementById('importPasswordInput').focus();
   }
-  if (e.key === 'Escape') {
-    if (addingInSection) { cancelAddItem(); return; }
-    closeSectionModal();
-    closeItemModal();
+  return ok;
+}
+
+// ─────────────────────────────────────────────────────
+//  GOOGLE SHEETS IMPORT
+// ─────────────────────────────────────────────────────
+async function importFromSheets() {
+  if(!verifyPassword()) return;
+  const raw=document.getElementById('sheetsUrlInput').value.trim();
+  if(!raw){showToast('warn','⚠️ Paste a Google Sheets URL first');return;}
+  const m=raw.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if(!m){showToast('warn','⚠️ Could not find a Sheet ID in that URL');return;}
+  closeImportModal();
+  showToast('info','⏳ Fetching Google Sheet…');
+  try {
+    const url=`https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv&gid=0`;
+    const resp=await fetch(url);
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text=await resp.text();
+    const rows=parseCSV(text);
+    if(rows.length<2){showToast('warn','⚠️ Sheet appears empty');return;}
+
+    // Expected: Category | Section | Item Name | Quantity | Location | Notes
+    const catMap={'flight systems':'fs','design & fab':'dnf','design and fab':'dnf','fabrication':'dnf','coding':'code'};
+    let count=0;
+    const updated=JSON.parse(JSON.stringify(data.sections));
+    for(let i=1;i<rows.length;i++){
+      const [rc,rs,rn,rq,rl,rno]=rows[i].map(c=>(c||'').trim());
+      if(!rs||!rn) continue;
+      const catKey=catMap[(rc||'').toLowerCase()];
+      if(!catKey) continue;
+      let sec=updated.find(s=>s.name.toLowerCase()===rs.toLowerCase()&&s.cat===catKey);
+      if(!sec){sec={id:'sec-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),name:rs,cat:catKey,items:[]};updated.push(sec);}
+      sec.items.push({id:'item-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),name:rn,qty:parseInt(rq)||0,loc:rl||'',notes:rno||''});
+      count++;
+    }
+    data.sections=updated; saveData(); refreshAll();
+    showToast('success',`✅ Imported ${count} items from Google Sheets`);
+  } catch(e) {
+    console.error('Sheets import error:',e);
+    showToast('warn','⚠️ Fetch failed. Is the sheet set to "Anyone with link → Viewer"?');
+  }
+}
+
+function parseCSV(text) {
+  return text.split(/\r?\n/).filter(l=>l.trim()).map(line=>{
+    const cells=[]; let cur='', inQ=false;
+    for(const ch of line) {
+      if(ch==='"'){inQ=!inQ;continue;}
+      if(ch===','&&!inQ){cells.push(cur);cur='';continue;}
+      cur+=ch;
+    }
+    cells.push(cur); return cells;
+  });
+}
+
+// ─────────────────────────────────────────────────────
+//  EXCEL IMPORT
+// ─────────────────────────────────────────────────────
+function triggerExcelImport() {
+  if(!verifyPassword()) return;
+  closeImportModal();
+  document.getElementById('importFileInput').click();
+}
+
+document.getElementById('importFileInput').addEventListener('change', function() {
+  const file=this.files[0]; if(!file) return;
+  if(typeof XLSX==='undefined'){showToast('warn','⚠️ Excel library not loaded');this.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const catMap={'Flight Systems':'fs','Design & Fab':'dnf','Coding':'code'};
+      let count=0;
+      const updated=JSON.parse(JSON.stringify(data.sections));
+      wb.SheetNames.forEach(sheet=>{
+        const catKey=catMap[sheet]; if(!catKey) return;
+        const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheet],{header:1,defval:''});
+        if(rows.length<2) return;
+        const bySection={};
+        for(let i=1;i<rows.length;i++){
+          const [sn,nm,qty,loc,notes]=rows[i];
+          const sk=String(sn||'').trim(); const nk=String(nm||'').trim();
+          if(!sk||!nk) continue;
+          if(!bySection[sk]) bySection[sk]=[];
+          bySection[sk].push({id:'item-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),name:nk,qty:parseInt(qty)||0,loc:String(loc||'').trim(),notes:String(notes||'').trim()});
+          count++;
+        }
+        Object.entries(bySection).forEach(([sn,items])=>{
+          const ex=updated.find(s=>s.name.toLowerCase()===sn.toLowerCase()&&s.cat===catKey);
+          if(ex){ex.items=items;}
+          else{updated.push({id:'sec-'+Date.now(),name:sn,cat:catKey,items});}
+        });
+      });
+      data.sections=updated; saveData(); refreshAll();
+      showToast('success',`✅ Imported ${count} items from Excel`);
+    }catch(err){console.error(err);showToast('warn','⚠️ Failed to read Excel file');}
+    this.value='';
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// ─────────────────────────────────────────────────────
+//  EXCEL EXPORT
+// ─────────────────────────────────────────────────────
+function exportExcel() {
+  if(typeof XLSX==='undefined'){showToast('warn','⚠️ Excel library not loaded');return;}
+  const wb=XLSX.utils.book_new();
+  [{key:'fs',label:'Flight Systems'},{key:'dnf',label:'Design & Fab'},{key:'code',label:'Coding'}].forEach(({key,label})=>{
+    const rows=[['Section','Item Name','Quantity','Location','Notes']];
+    data.sections.filter(s=>s.cat===key).forEach(sec=>{
+      if(!sec.items.length){rows.push([sec.name,'','','','']);}
+      else sec.items.forEach(i=>rows.push([sec.name,i.name,i.qty,i.loc||'',i.notes||'']));
+    });
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:22},{wch:28},{wch:10},{wch:20},{wch:30}];
+    XLSX.utils.book_append_sheet(wb,ws,label);
+  });
+  const allRows=[['Category','Section','Item Name','Quantity','Location','Notes']];
+  const cL={fs:'Flight Systems',dnf:'Design & Fab',code:'Coding'};
+  data.sections.forEach(sec=>sec.items.forEach(i=>allRows.push([cL[sec.cat]||sec.cat,sec.name,i.name,i.qty,i.loc||'',i.notes||''])));
+  const wsA=XLSX.utils.aoa_to_sheet(allRows);
+  wsA['!cols']=[{wch:16},{wch:22},{wch:28},{wch:10},{wch:20},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,wsA,'All Items');
+  XLSX.writeFile(wb,'asrl-inventory-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showToast('info','📥 Excel file downloaded');
+}
+
+// ─────────────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────────────
+function showToast(type, msg) {
+  const t=document.createElement('div');
+  t.className=`toast ${type}`; t.textContent=msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+// ─────────────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────────────
+function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function highlight(html,term) {
+  return html.replace(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<span class="highlight">$1</span>');
+}
+
+// ─────────────────────────────────────────────────────
+//  WIRE UP ALL STATIC BUTTONS (no onclick= in HTML)
+// ─────────────────────────────────────────────────────
+document.getElementById('btnHamburger').addEventListener('click', toggleSidebar);
+document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+document.getElementById('btnAddSection').addEventListener('click', ()=>openAddSectionModal());
+document.getElementById('btnImport').addEventListener('click', openImportModal);
+document.getElementById('btnExcel').addEventListener('click', exportExcel);
+document.getElementById('btnCancelSection').addEventListener('click', closeSectionModal);
+document.getElementById('btnConfirmSection').addEventListener('click', confirmSection);
+document.getElementById('btnCancelEditItem').addEventListener('click', closeItemModal);
+document.getElementById('btnConfirmEditItem').addEventListener('click', confirmEditItem);
+document.getElementById('btnCancelImport').addEventListener('click', closeImportModal);
+document.getElementById('btnImportSheets').addEventListener('click', importFromSheets);
+document.getElementById('btnImportExcel').addEventListener('click', triggerExcelImport);
+document.getElementById('searchInput').addEventListener('input', renderView);
+
+// Keyboard shortcuts
+document.getElementById('sectionNameInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') confirmSection();
+  if(e.key==='Escape') closeSectionModal();
+});
+document.getElementById('editItemName').addEventListener('keydown', e=>{ if(e.key==='Enter') confirmEditItem(); });
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter'&&addingInSection){ saveNewItem(addingInSection); return; }
+  if(e.key==='Escape'){
+    if(addingInSection){addingInSection=null;renderView();return;}
+    closeSectionModal(); closeItemModal(); closeImportModal();
   }
 });
 
-// ── ITEM EDIT MODAL ───────────────────────────────────
-function openEditItem(sectionId, itemId) {
-  const section = data.sections.find(s => s.id === sectionId);
-  if (!section) return;
-  const item = section.items.find(i => i.id === itemId);
-  if (!item) return;
-  editingItemId = itemId;
-  editingItemSectionId = sectionId;
-  document.getElementById('editItemName').value = item.name;
-  document.getElementById('editItemQty').value = item.qty;
-  document.getElementById('editItemLoc').value = item.loc || '';
-  document.getElementById('editItemNotes').value = item.notes || '';
-  document.getElementById('itemModal').classList.add('open');
-  setTimeout(() => document.getElementById('editItemName').focus(), 50);
-}
-function closeItemModal() {
-  document.getElementById('itemModal').classList.remove('open');
-  editingItemId = null;
-  editingItemSectionId = null;
-}
-function confirmEditItem() {
-  const name = document.getElementById('editItemName').value.trim();
-  if (!name) { showToast('warn', 'Item name cannot be empty'); return; }
-  const section = data.sections.find(s => s.id === editingItemSectionId);
-  if (!section) return;
-  const item = section.items.find(i => i.id === editingItemId);
-  if (!item) return;
-  item.name = name;
-  item.qty = parseInt(document.getElementById('editItemQty').value) || 0;
-  item.loc = document.getElementById('editItemLoc').value.trim();
-  item.notes = document.getElementById('editItemNotes').value.trim();
-  closeItemModal();
-  saveData();
-  showToast('success', '✅ Item updated');
-  refreshAll();
-}
-
-// ── QTY ADJUST ───────────────────────────────────────
-function adjustQty(sectionId, itemId, delta) {
-  const section = data.sections.find(s => s.id === sectionId);
-  if (!section) return;
-  const item = section.items.find(i => i.id === itemId);
-  if (!item) return;
-  item.qty = Math.max(0, item.qty + delta);
-  saveData();
-  refreshAll();
-}
-
-// ── DELETE ITEM ───────────────────────────────────────
-function deleteItem(sectionId, itemId) {
-  const section = data.sections.find(s => s.id === sectionId);
-  if (!section) return;
-  const item = section.items.find(i => i.id === itemId);
-  if (!item) return;
-  if (!confirm(`Delete "${item.name}"?`)) return;
-  section.items = section.items.filter(i => i.id !== itemId);
-  saveData();
-  showToast('info', '🗑 Item deleted');
-  refreshAll();
-}
-
-// ── TOAST ─────────────────────────────────────────────
-function showToast(type, msg) {
-  const container = document.getElementById('toastContainer');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = msg;
-  container.appendChild(toast);
-  setTimeout(() => toast.remove(), 2900);
-}
-
-// ── UTILS ─────────────────────────────────────────────
-function escHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str || '';
-  return d.innerHTML;
-}
-function highlight(html, term) {
-  if (!term) return html;
-  const re = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  return html.replace(re, '<span class="highlight">$1</span>');
-}
-
-// ── INIT ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────
 loadData();
 </script>
 </body>
