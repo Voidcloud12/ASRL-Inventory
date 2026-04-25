@@ -6,51 +6,7 @@
 <title>ASRL Inventory Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script type="module">
-// ── FIREBASE SETUP ────────────────────────────────────
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAoGCt4yll06Zk67O2mLcHtq_NdoG4E5_E",
-  authDomain: "asrl-inventory-c5539.firebaseapp.com",
-  projectId: "asrl-inventory-c5539",
-  storageBucket: "asrl-inventory-c5539.firebasestorage.app",
-  messagingSenderId: "346404511942",
-  appId: "1:346404511942:web:819b53252b29c52b81b7c7",
-  measurementId: "G-0VMBWF0G87"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const DOC_REF = doc(db, "inventory", "main");
-
-// Expose Firebase helpers to global scope so non-module JS can use them
-window._fbSave = async function(dataObj) {
-  await setDoc(DOC_REF, { payload: JSON.stringify(dataObj) });
-};
-
-window._fbInit = async function() {
-  try {
-    const snap = await getDoc(DOC_REF);
-    if (snap.exists()) {
-      window._onFirebaseLoad(JSON.parse(snap.data().payload));
-    } else {
-      window._onFirebaseLoad(null);
-    }
-  } catch(e) {
-    console.error("Firebase load error:", e);
-    window._onFirebaseLoad(null);
-  }
-
-  // Real-time listener — updates all tabs/devices instantly
-  onSnapshot(DOC_REF, (snap) => {
-    if (snap.exists() && window._onFirebaseSnapshot) {
-      window._onFirebaseSnapshot(JSON.parse(snap.data().payload));
-    }
-  });
-};
-</script>
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -981,7 +937,23 @@ window._fbInit = async function() {
 <!-- Toast container -->
 <div class="toast-container" id="toastContainer"></div>
 
-<script>
+<script type="module">
+// ── FIREBASE ──────────────────────────────────────────
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const _firebaseConfig = {
+  apiKey: "AIzaSyAoGCt4yll06Zk67O2mLcHtq_NdoG4E5_E",
+  authDomain: "asrl-inventory-c5539.firebaseapp.com",
+  projectId: "asrl-inventory-c5539",
+  storageBucket: "asrl-inventory-c5539.firebasestorage.app",
+  messagingSenderId: "346404511942",
+  appId: "1:346404511942:web:819b53252b29c52b81b7c7"
+};
+const _fbApp = initializeApp(_firebaseConfig);
+const _db = getFirestore(_fbApp);
+const _DOC = doc(_db, "inventory", "main");
+
 // ── DATA ──────────────────────────────────────────────
 // data = { sections: [ { id, name, cat, items: [{id,name,qty,loc,notes}] } ] }
 let data = { sections: [] };
@@ -1014,31 +986,43 @@ const DEFAULT_SECTIONS = [
   { id: 'code-misc', name: 'Misc Coding Hardware', cat: 'code' },
 ];
 
-// ── STORAGE (Firebase Firestore — shared across all users/devices) ────────
+// ── STORAGE (Firebase Firestore) ──────────────────────
 let _saveTimeout = null;
-let _ignoreNextSnapshot = false; // prevent echo after our own save
+let _ignoreNextSnapshot = false;
 
-// Called by Firebase module once initial data is fetched
-window._onFirebaseLoad = function(payload) {
-  if (payload && payload.sections) {
-    data = payload;
-  } else {
+async function loadData() {
+  setSaveStatus('connecting');
+  try {
+    const snap = await getDoc(_DOC);
+    if (snap.exists()) {
+      data = JSON.parse(snap.data().payload);
+    } else {
+      data.sections = DEFAULT_SECTIONS.map(s => ({ ...s, items: [] }));
+      await _writeToFirebase(); // first-time seed
+    }
+  } catch(e) {
+    console.error("Firebase load failed:", e);
+    showToast('warn', '⚠️ Could not connect to cloud. Check internet.');
     data.sections = DEFAULT_SECTIONS.map(s => ({ ...s, items: [] }));
-    saveData(); // first-time write
   }
   refreshAll();
   setSaveStatus('saved');
-};
 
-// Called by real-time listener on any remote change
-window._onFirebaseSnapshot = function(payload) {
-  if (_ignoreNextSnapshot) { _ignoreNextSnapshot = false; return; }
-  if (payload && payload.sections) {
-    data = payload;
-    refreshAll();
-    showToast('info', '🔄 Inventory updated by another user');
-  }
-};
+  // Live listener for changes from other users
+  onSnapshot(_DOC, (snap) => {
+    if (_ignoreNextSnapshot) { _ignoreNextSnapshot = false; return; }
+    if (snap.exists()) {
+      const incoming = JSON.parse(snap.data().payload);
+      data = incoming;
+      refreshAll();
+      showToast('info', '🔄 Inventory synced from cloud');
+    }
+  });
+}
+
+async function _writeToFirebase() {
+  await setDoc(_DOC, { payload: JSON.stringify(data) });
+}
 
 function saveData() {
   setSaveStatus('saving');
@@ -1046,25 +1030,14 @@ function saveData() {
   clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(async () => {
     try {
-      await window._fbSave(data);
+      await _writeToFirebase();
       setSaveStatus('saved');
     } catch(e) {
       setSaveStatus('error');
       console.error('Firebase save error:', e);
       showToast('warn', '⚠️ Save failed — check connection');
     }
-  }, 400); // debounce rapid changes
-}
-
-function loadData() {
-  setSaveStatus('saving');
-  // Firebase module calls _onFirebaseLoad when ready
-  if (window._fbInit) {
-    window._fbInit();
-  } else {
-    // Module not ready yet — wait for it
-    setTimeout(loadData, 100);
-  }
+  }, 400);
 }
 
 function setSaveStatus(state) {
@@ -1073,10 +1046,6 @@ function setSaveStatus(state) {
   dot.className = 'save-dot' + (state === 'saving' ? ' saving' : state === 'error' ? ' error' : '');
   label.textContent = state === 'saving' ? 'Syncing…' : state === 'error' ? 'Error' : state === 'connecting' ? 'Connecting…' : 'Saved ☁️';
 }
-
-// ── INIT ─────────────────────────────────────────────
-setSaveStatus('connecting');
-loadData();
 
 // ── EXPORT EXCEL ──────────────────────────────────────
 function exportExcel() {
@@ -1599,6 +1568,19 @@ function showToast(type, msg) {
   setTimeout(() => toast.remove(), 2900);
 }
 
+// ── EXPOSE FUNCTIONS TO HTML (required for type="module") ────────────────
+Object.assign(window, {
+  navigateTo, toggleSidebar, closeSidebarMobile,
+  openAddSectionModal, closeSectionModal, confirmSection,
+  openEditSectionModal, deleteSection,
+  openAddItemInline, cancelAddItem, confirmAddItem,
+  openEditItemModal, closeItemModal, confirmEditItem,
+  deleteItem, adjustQty,
+  openImportPasswordModal, closeImportPasswordModal, confirmImportPassword,
+  exportExcel, importExcel,
+  renderView
+});
+
 // ── UTILS ─────────────────────────────────────────────
 function escHtml(str) {
   const d = document.createElement('div');
@@ -1611,7 +1593,9 @@ function highlight(html, term) {
   return html.replace(re, '<span class="highlight">$1</span>');
 }
 
-// (init handled above in setSaveStatus block)
+// ── INIT ─────────────────────────────────────────────
+setSaveStatus('connecting');
+loadData();
 </script>
 </body>
 </html>
